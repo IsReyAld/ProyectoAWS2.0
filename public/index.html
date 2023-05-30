@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sistema de alimentación automatizado</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      text-align: center;
+      padding: 20px;
+    }
+
+    h2{
+      text-align: center;
+    }
+
+   .container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 90%;
+  margin: 0 auto;
+  border: 1px solid black;
+  padding: 10px;
+}
+    .sub-container{
+      width: 33%;
+      height: 90%;
+      display: flex;
+      flex-wrap: wrap;
+      margin: 10px;
+      border: 1px solid black;
+      padding: 5px;
+    }
+
+    .gauge-container {
+      width: fit-content;
+      height: 200px;
+      text-align: center;
+      margin: 20px;
+      border: 1px solid black;
+      padding: 10px;
+    }
+
+    .message-container {
+      margin-top: 20px;
+      text-align: center;
+      margin: 20px;
+      border: 1px solid black;
+      padding: 10px;
+    }
+
+    .message {
+      margin-bottom: 10px;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: center;
+      margin: 20px;
+      border: 1px solid black;
+      padding: 10px;
+    }
+
+    .button-container button {
+      margin: 0 5px;
+    }
+
+    .slider-container {
+  width: 160px; /* Ancho fijo del contenedor del control deslizante */
+  margin: 10px;
+  border: 1px solid black;
+  padding: 10px;
+}
+
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/14.6.3/nouislider.min.css" />
+</head>
+<body>
+  <h1>Sistema de alimentación automatizado</h1>
+  <h2>Comedero vacas</h2>
+  <div class="container">
+    <div class="sub-container">
+
+      <div class="button-container">
+        <button onclick="sendMessage()">Despacho Manual</button>
+      </div>
+
+      
+        <div class="slider-container">
+          <h5>Seleccione la cantidad de alimento a despachar</h5>
+          <div id="slider"></div>
+          <div id="slider-value"></div>
+        </div>
+
+      <div class="message-container">
+        <div id="messages"></div>
+      </div>
+
+      <div class="gauge-container">
+
+        <canvas id="gauge-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="sub-container">
+      <div class="button-container">
+        <button>Despacho Automático</button>
+      </div>
+
+      <div class="gauge-container">
+        <canvas id="gauge-chart2"></canvas>
+      </div>
+    </div>
+
+    <div class="sub-container">
+      <div class="button-container">
+        <button>Despacho Sensor</button>
+      </div>
+      <div class="gauge-container">
+        <canvas id="gauge-chart3"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nouislider@14.6.3"></script>
+  <script>
+    const socket = io();
+
+    // Crear el gráfico de indicador de nivel
+    const gaugeChart = new Chart(document.getElementById('gauge-chart'), {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [0, 100],
+          backgroundColor: ['#f44336', '#4caf50'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        cutoutPercentage: 85,
+        rotation: Math.PI,
+        circumference: 85,
+        tooltips: {
+          enabled: false
+        },
+        legend: {
+          display: false
+        }
+      }
+    });
+
+    // Crear el segundo gráfico de indicador de nivel
+    const gaugeChart2 = new Chart(document.getElementById('gauge-chart2'), {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [0, 100],
+          backgroundColor: ['#f44336', '#4caf50'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        cutoutPercentage: 85,
+        rotation: Math.PI,
+        circumference: 85,
+        tooltips: {
+          enabled: false
+        },
+        legend: {
+          display: false
+        }
+      }
+    });
+
+    // Escuchar los mensajes MQTT recibidos
+    socket.on('mqttMessage', (data) => {
+      const { topic, message } = data;
+
+      // Mostrar el mensaje recibido en la consola
+      console.log(`Mensaje recibido en el topic '${topic}': ${message}`);
+
+      // Actualizar el gráfico con el valor recibido
+      if (topic === 'sobranteVacasTopic') {
+        const value = parseInt(message);
+        if (!isNaN(value)) {
+          const data = [value, 100 - value];
+          gaugeChart.data.datasets[0].data = data;
+          gaugeChart.update();
+        }
+      } else if (topic === 'outTopic') {
+        const messagesContainer = document.getElementById('messages');
+        messagesContainer.textContent = message;
+      }
+    });
+
+    // Enviar mensaje mediante MQTT al topic "inTopic"
+    function sendMessage() {
+      const message = '{   "message": "Hello from AWS IoT console"   "ser_Control": "1"}';
+      socket.emit('sendMessage', message);
+    }
+
+    function procesarMensaje(topic, message) {
+  // Comprueba si el mensaje es igual a "Movimiento detectado en comedero vacas"
+  if (message === 'Movimiento detectado en comedero vacas') {
+    // Obtiene el valor actual de "sobranteVacasTopic"
+    const sobranteVacasValue = obtenerSobranteVacasValue();
+
+    // Realiza la resta
+    const calculatedValue = sobranteVacasValue - 5;
+
+    // Imprime el valor calculado
+    console.log('Valor calculado:', calculatedValue);
+  }
+}
+
+    document.addEventListener('DOMContentLoaded', () => {
+  // Inicializar el control deslizante
+  const slider = document.getElementById('slider');
+
+  noUiSlider.create(slider, {
+    start: 50, // Valor inicial
+    range: {
+      min: 1, // Valor mínimo
+      max: 100, // Valor máximo
+    },
+    format: {
+      to: (value) => Math.round(value), // Formatea el valor para mostrar números enteros
+      from: (value) => parseFloat(value), // Convierte el valor de vuelta a decimal
+    },
+  });
+
+  // Escucha el evento 'update' para actualizar el valor seleccionado
+  slider.noUiSlider.on('update', (values, handle) => {
+    const sliderValue = document.getElementById('slider-value');
+    sliderValue.textContent = values[handle];
+  });
+});
+
+// Obtener el elemento del slider
+const slider = document.getElementById('slider');
+
+// Escuchar el evento de cambio del slider
+slider.addEventListener('input', () => {
+  const value = slider.value;
+
+  // Enviar el mensaje al topic "inSliderTopic"
+  const message = JSON.stringify({ value });
+  socket.emit('sendMessage', { topic: 'inTopic', message });
+});
+
+
+
+  </script>
+</body>
+</html>

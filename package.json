@@ -1,0 +1,22 @@
+{
+  "name": "proyectoaws2.0",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chart.js": "^4.3.0",
+    "chartjs-gauge": "^0.3.0",
+    "express": "^4.18.2",
+    "http": "^0.0.1-security",
+    "mqtt": "^4.3.7",
+    "socket.io": "^4.6.1"
+  },
+  "devDependencies": {},
+  "description": ""
+}
